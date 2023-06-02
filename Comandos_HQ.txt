@@ -1,0 +1,376 @@
+﻿------------SWITCHES CAPA 2---------------------------
+-----CREAR VLANS------
+vlan 10
+name Sales
+vlan 20
+name Accounting
+vlan 30
+name HR
+vlan 40
+name Production
+vlan 99
+name Management
+vlan 100
+name Native
+exit
+
+----acceso de puertos pc a vlans---------
+int f0/3
+sw mod access
+sw access vlan 10
+exit
+
+int f0/4
+sw mod access
+sw access vlan 20
+exit
+
+int f0/5
+sw mod access
+sw access vlan 30
+exit
+
+int f0/6
+sw mod access
+sw access vlan 40
+exit
+
+int f0/7
+sw mod access
+sw access vlan 99
+exit
+_______________________________
+Port Security nos permite configurar el puerte que permita un 
+número específico de direcciones MAC en ese puerto. 
+int range f0/3-7
+sw port-security
+exit
+int range fa0/8-24
+sh
+exit
+
+-----Switch capa 2 tronkales------
+
+int  range fa0/1-2
+sw mode trunk
+sw trunk allowed vlan 10,20,30,40,99,100
+sw trunk native vlan 100
+no sh
+exit
+show interface status
+show interface trunk
+
+int vlan 100
+exit
+
+int vlan 101
+ip address 10.100.239.101 255.255.255.240 (dirección ip del helper en cada sw cambia)
+exit
+int vlan 101
+ip address 10.100.239.102 255.255.255.240 
+exit
+int vlan 101
+ip address 10.100.239.103 255.255.255.240 
+exit
+
+
+ip default-gateway 10.100.239.113(El default gateway del management)
+
+
+----------------------------SWITCHES CAPA 3-------------------------------------------
+vlan 10
+name Sales
+vlan 20
+name Accounting
+vlan 30
+name HR
+vlan 40
+name Production
+vlan 99
+name Management
+vlan 100
+name Native
+exit
+
+
+int vlan 100
+exit
+
+int vlan 101
+ip add 10.100.239.104 255.255.255.240
+no sh
+exit
+
+int vlan 101
+ip add 10.100.239.105 255.255.255.240
+no sh
+exit
+
+int vlan 101
+ip add 10.100.239.106 255.255.255.240
+no sh
+exit
+
+int vlan 101
+ip add 10.100.239.107 255.255.255.240
+no sh
+exit
+
+
+interface Port-channel1 
+switchport trunk native vlan 100
+switchport trunk allowed vlan 10,20,30,40,99-100
+switchport trunk encapsulation dot1q
+switchport mode trunk
+
+int range fa0/1, fa0/2 - 7
+switchport trunk native vlan 100
+switchport trunk allowed vlan 10,20,30,40,99-100
+switchport trunk encapsulation dot1q
+switchport mode trunk
+int range fa0/1
+switchport trunk native vlan 100
+switchport trunk allowed vlan 10,20,30,40,99-100
+switchport trunk encapsulation dot1q
+switchport mode trunk
+int range fa0/3
+switchport trunk native vlan 100
+switchport trunk allowed vlan 10,20,30,40,99-100
+switchport trunk encapsulation dot1q
+switchport mode trunk
+
+-----PAGP----------Etherchannel Solo en  los switches de arriba
+int range g0/1 - 2
+switchport trunk native vlan 100
+switchport trunk allowed vlan 10,20,30,40,99-100
+switchport trunk encapsulation dot1q
+switchport mode trunk
+channel-protocol pagp
+channel-group 1 mode desirable
+
+
+--------------------ROUTER 1 y ROUTER 3 -------------------------------------
+**STANDBY IP -> ASIGNAR 1ERA IP UTILIZABLE (DEFAULT GATEWAY VIRTUAL(gateway de las PC))
+**ip helper-address -> asignar ip del server dhcp
+** la ip asignada a cada vlan en el subneteo sera distinta en cada router: router 1: .2, router 2: .3
+------------------------HSRP e INTHER-VLAN ROUTING---------------------
+R1
+Sales
+int fa0/0.10
+enca dot 10
+ip add 10.100.252.2 255.255.255.0 
+no sh
+standby 1 ip 10.100.252.1
+stan 1 preempt
+stand 1 priority 100
+ip helper-address 10.100.216.5
+standby 1 track fa0/0
+
+accouting
+int fa0/0.20
+enca dot 20
+ip add 10.100.253.2 255.255.255.0 
+no sh
+standby 1 ip 10.100.253.1
+stan 1 preempt
+stand 1 priority 100
+ip helper-address 10.100.216.5
+standby 1 track fa0/0
+
+HR
+int fa0/0.30
+enca dot 30
+ip add 10.100.239.130 255.255.255.128
+no sh
+standby 1 ip 10.100.239.129
+stan 1 preempt
+stand 1 priority 100
+ip helper-address 10.100.216.5
+standby 1 track fa0/0
+
+PRODUCTION
+int fa0/0.40
+enca dot 40
+ip add 10.100.254.2 255.255.254.0
+no sh
+standby 1 ip 10.100.254.1
+stan 1 preempt
+stand 1 priority 100
+ip helper-address 10.100.216.5
+standby 1 track fa0/0
+
+MANAGEMENT
+int fa0/0.99
+enca dot 99
+ip add 10.100.239.114 255.255.255.240
+no sh
+standby 1 ip 10.100.239.113
+stan 1 preempt
+stand 1 priority 100
+ip helper-address 10.100.216.5
+standby 1 track fa0/0
+
+int fa0/0.100
+_______________________________________________
+
+R2
+Sales
+int fa0/0.10
+enca dot 10
+ip add 10.100.252.3 255.255.255.0 
+no sh
+standby 1 ip 10.100.252.1
+stan 1 preempt
+stand 1 priority 200
+ip helper-address 10.100.216.5
+standby 1 track fa0/0
+
+accouting
+int fa0/0.20
+enca dot 20
+ip add 10.100.253.3 255.255.255.0 
+no sh
+standby 1 ip 10.100.253.1
+stan 1 preempt
+stand 1 priority 200
+ip helper-address 10.100.216.5
+standby 1 track fa0/0
+
+HR
+int fa0/0.30
+enca dot 30
+ip add 10.100.239.131 255.255.255.128
+no sh
+standby 1 ip 10.100.239.129
+stan 1 preempt
+stand 1 priority 200
+ip helper-address 10.100.216.5
+standby 1 track fa0/0
+
+PRODUCTION
+int fa0/0.40
+enca dot 40
+ip add 10.100.254.3 255.255.254.0
+no sh
+standby 1 ip 10.100.254.1
+stan 1 preempt
+stand 1 priority 200
+ip helper-address 10.100.216.5
+standby 1 track fa0/0
+
+MANAGEMENT
+int fa0/0.99
+enca dot 99
+ip add 10.100.239.115 255.255.255.240
+no sh
+standby 1 ip 10.100.239.113
+stan 1 preempt
+stand 1 priority 200
+ip helper-address 10.100.216.5
+standby 1 track fa0/0
+
+int fa0/0.100
+
+________________
+Errores cometidos:
+Al momento de especificar el tipo de encapsulación especificamos mal la vlan 
+Otro error fue que al momento de poner la ip la mascarara de subred estaba mal
+
+
+int fa0/0.100
+-----enrutamiento router 1--------
+0.0.0.0 0.0.0.0 10.100.243.109
+
+-----enrutamiento router 2--------
+0.0.0.0 0.0.0.0 10.100.243.105
+------ENRUTAMIENTO --------------------------
+R3
+IP ROUTE 10.100.252.0 255.255.255.0 10.100.239.110
+IP ROUTE 10.100.253.0 255.255.255.0 10.100.239.110
+IP ROUTE 10.100.239.128 255.255.255.128 10.100.239.110
+IP ROUTE 10.100.254.0 255.255.254.0 10.100.239.110
+IP ROUTE 10.100.239.112 255.255.255.240 10.100.239.110
+
+R5
+IP ROUTE 10.100.252.0 255.255.255.0 150.0.255.234
+IP ROUTE 10.100.253.0 255.255.255.0 150.0.255.234
+IP ROUTE 10.100.239.128 255.255.255.128 150.0.255.234
+IP ROUTE 10.100.254.0 255.255.254.0 150.0.255.234
+IP ROUTE 10.100.239.112 255.255.255.240 150.0.255.234
+-----------Enrutamiento BRACH------------------
+R1
+ip route 10.100.250.0 255.255.254.0 10.100.239.109 
+ip route 10.100.249.0 255.255.255.0 10.100.239.109 
+ip route 10.100.248.0 255.255.255.0 10.100.239.109 
+ip route 10.100.243.128 255.255.255.128 10.100.239.109 
+ip route 10.100.243.112 255.255.255.240 10.100.239.109 
+
+R2
+ip route 10.100.250.0 255.255.254.0 10.100.239.105
+ip route 10.100.249.0 255.255.255.0 10.100.239.105
+ip route 10.100.248.0 255.255.255.0 10.100.239.105
+ip route 10.100.243.128 255.255.255.128 10.100.239.105
+ip route 10.100.243.112 255.255.255.240 10.100.239.105
+R3
+ip route 10.100.250.0 255.255.254.0 150.0.255.233
+ip route 10.100.249.0 255.255.255.0 150.0.255.233
+ip route 10.100.248.0 255.255.255.0 150.0.255.233
+ip route 10.100.243.128 255.255.255.128 150.0.255.233
+ip route 10.100.243.112 255.255.255.240 150.0.255.233
+
+R5
+ip route 10.100.250.0 255.255.254.0 150.0.255.241
+ip route 10.100.249.0 255.255.255.0 150.0.255.241
+ip route 10.100.248.0 255.255.255.0 150.0.255.241
+ip route 10.100.243.128 255.255.255.128 150.0.255.241
+ip route 10.100.243.112 255.255.255.240 150.0.255.241
+
+
+ip route 10.100.244.0 255.255.252.0 10.100.239.105
+
+-----------------server dhcp----------------------------------
+**Configurar ip en router (.1) y server(.2)
+
+**def-gat 10.100.216.1
+
+**f0
+**ip 10.100.216.5
+**mascara de red: 255.255.252.0
+
+**en services, dhcp agregar vlans
+** yo empece a asignar desde la .5
+
+Pool name: vlan10
+def gateway: 10.100.252.1
+dns server:
+star ip add: 10.100.252.5
+subnet mask: 255.255.255.0
+Max user: 200
+
+Pool name: vlan20
+def gateway: 10.100.253.1
+dns server
+star ip add: 10.100.253.5
+subnet mask: 255.255.255.0
+Max user: 300
+
+Pool name: vlan30
+def gateway: 10.100.239.129
+dns server
+star ip add: 10.100.239.133
+subnet mask: 255.255.255.128
+Max user: 150
+
+Pool name: vlan40
+def gateway: 10.100.254.1
+dns server
+star ip add: 10.100.254.5
+subnet mask: 255.255.254.0
+Max user: 500
+
+Pool name: vlan99
+def gateway: 10.100.239.113
+dns server
+star ip add: 10.100.239.117
+subnet mask: 255.255.255.240
+Max user: 60
